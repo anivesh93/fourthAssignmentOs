@@ -21,6 +21,10 @@ char ip[100];
 
 char client_buffer_recv[MAXLEN], client_buffer_send[MAXLEN];
 
+extern int errno;
+
+struct sockaddr_in serv_addr; //server address structure
+
 int make_socket()
 {
 	int sockfd;
@@ -31,6 +35,26 @@ int make_socket()
 		exit(1);
 	}
 	return sockfd;
+}
+
+int connect_to_server(int sockfd)
+{ 
+    memset(&serv_addr, '0', sizeof(serv_addr)); 
+    serv_addr.sin_family = AF_INET;
+    serv_addr.sin_port = htons(SERV_PORT); 
+    if (inet_pton(AF_INET, ip, &serv_addr.sin_addr) <= 0)
+    {
+        perror("Problem with inet_pton");
+        exit(2);
+    } 
+
+	//connect to server
+    if (connect(sockfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0)
+    {
+    	perror("Problem in connecting to server");
+    	return -1;
+		//exit(3);
+    }
 }
 
 int netserverinit(char *hostname)
@@ -58,35 +82,13 @@ int netserverinit(char *hostname)
 int netopen(const char *pathname, int flags)
 {
 	//create socket
-    /*
-    int sockfd;
-    sockfd = socket(AF_INET, SOCK_STREAM, 0);
-	if (sockfd < 0)
-	{
-		perror("Problem in creating socket");
-		exit(1);
-	}
-	*/
 	int sockfd = make_socket();
+	if (sockfd == -1)
+		return -1;
 
 	//initialize server port and address
-    struct sockaddr_in serv_addr; 
-    memset(&serv_addr, '0', sizeof(serv_addr)); 
-    serv_addr.sin_family = AF_INET;
-    serv_addr.sin_port = htons(SERV_PORT); 
-    if (inet_pton(AF_INET, ip, &serv_addr.sin_addr) <= 0)
-    {
-        perror("Problem with inet_pton");
-        exit(2);
-    } 
-
-	//connect to server
-    if (connect(sockfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0)
-    {
-    	perror("Problem in connecting to server");
-		exit(3);
-    }
-
+    if (connect_to_server(sockfd) == -1)
+    	return -1;
     
     memset(client_buffer_send, 0, sizeof(client_buffer_send)); 
     strcat(client_buffer_send, pathname);
@@ -97,12 +99,8 @@ int netopen(const char *pathname, int flags)
     	strcat(client_buffer_send, "O_WRONLY");
     if (flags == 2)
     	strcat(client_buffer_send, "O_RDWR");
-    // int len = strlen(pathname);
-    // client_buffer_send[len] = ',';
-    // client_buffer_send[len+1] =  (char)(flags + '0');
-    // client_buffer_send[len+2] = '\0';
 
-    printf("sending to server: %s\n", client_buffer_send);
+    printf("\nsending to server for opening: %s\n", client_buffer_send);
     send(sockfd, client_buffer_send, strlen(client_buffer_send), 0);
 
     memset(client_buffer_recv, 0, sizeof(client_buffer_recv));
@@ -111,10 +109,23 @@ int netopen(const char *pathname, int flags)
    		perror("The server terminated prematurely");
    		exit(4);
   	}
-  	printf("%s", "Output received from the server: ");
+  	printf("Output received from the server: %s\n", client_buffer_recv);
   	//fputs(client_buffer_recv, stdout);
-  	printf("%s\n", client_buffer_recv);
-  	//printf("\n");
+
+  	char *ch;		
+  	ch = strtok(client_buffer_recv, ",");
+  	int ctr = 0, num_bytes_netread;
+  	while (ch != NULL) 
+  	{
+  		if (ctr == 0)
+  			num_bytes_netread = atoi(ch);
+  		if (ctr == 1)
+  			errno = atoi(ch); //error code will be second token in data received from server
+    	ch = strtok(NULL, ",");
+    	ctr++;
+  	}
+  	if (ctr > 1)
+  		return -1;
   	
   	return atoi(client_buffer_recv);
 }
@@ -122,6 +133,8 @@ int netopen(const char *pathname, int flags)
 int netread(int netfd, char *buffer, int num_bytes)
 {
 	int sockfd = make_socket();
+	if (sockfd == -1)
+		return -1;
 
 	struct sockaddr_in serv_addr; 
     memset(&serv_addr, '0', sizeof(serv_addr)); 
@@ -151,7 +164,7 @@ int netread(int netfd, char *buffer, int num_bytes)
     strcat(client_buffer_send, ",");
     strcat(client_buffer_send, num_bytes_c);
     
-    printf("sending to server: %s\n", client_buffer_send);
+    printf("\nsending to server for reading: %s\n", client_buffer_send);
     send(sockfd, client_buffer_send, strlen(client_buffer_send), 0);
 
     memset(client_buffer_recv, 0, sizeof(client_buffer_recv));
@@ -161,25 +174,83 @@ int netread(int netfd, char *buffer, int num_bytes)
    		exit(4);
   	}
 
-    //printf("Output received from the server:");
-    //fputs(client_buffer_recv, stdout);
-    //printf("%s\n", client_buffer_recv);
-
     char *ch;		
   	ch = strtok(client_buffer_recv, ",");
   	int ctr = 0, num_bytes_netread;
   	while (ch != NULL) 
   	{
   		if (ctr == 0)
+  		{
   			num_bytes_netread = atoi(ch);
+  		}
   		if (ctr == 1)
-  			strcpy(buffer, ch);
+  		{
+  			if (num_bytes_netread == -1)
+  				errno = atoi(ch);
+  			else
+  				strcpy(buffer, ch);
+  		}
     		//printf("%s\n", ch);
     	ch = strtok(NULL, ",");
     	ctr++;
   	}
   	
   	return num_bytes_netread;
+}
+
+int netwrite(int netfd, const void *buf, int nbyte)
+{
+	int sockfd = make_socket();
+	if (sockfd == -1)
+		return -1;
+
+	if (connect_to_server(sockfd) == -1)
+		return -1;
+
+	memset(client_buffer_send, 0, sizeof(client_buffer_send));
+    char netfd_c[5]; 
+    sprintf(netfd_c, "%d", netfd);
+    strcat(client_buffer_send, netfd_c);
+    strcat(client_buffer_send, ",");
+    strcat(client_buffer_send, "write");
+    strcat(client_buffer_send, ",");
+    strcat(client_buffer_send, buf);
+    char num_bytes_c[10];
+    sprintf(num_bytes_c, "%d", nbyte);
+    strcat(client_buffer_send, ",");
+    strcat(client_buffer_send, num_bytes_c);
+    
+    printf("\nsending to server for writing: %s\n", client_buffer_send);
+    send(sockfd, client_buffer_send, strlen(client_buffer_send), 0);
+
+    memset(client_buffer_recv, 0, sizeof(client_buffer_recv));
+    if (recv(sockfd, client_buffer_recv, MAXLEN, 0) == 0)
+    {
+   		perror("The server terminated prematurely");
+   		exit(4);
+  	}
+
+    char *ch;		
+  	ch = strtok(client_buffer_recv, ",");
+  	int ctr = 0, num_bytes_netwrote;
+  	while (ch != NULL) 
+  	{
+  		if (ctr == 0)
+  		{
+  			num_bytes_netwrote = atoi(ch);
+  		}
+  		if (ctr == 1)
+  		{
+  			if (num_bytes_netwrote == -1)
+  				errno = atoi(ch);
+  		}
+    	ch = strtok(NULL, ",");
+    	ctr++;
+  	}
+  	if (ch == NULL)
+  		return atoi(client_buffer_recv);
+
+  	return num_bytes_netwrote;
 }
 
 int main()
@@ -192,18 +263,39 @@ int main()
 	}
 	
 	
-	int netfd = netopen("/home/anivesh/Desktop/OSD/4A/test.txt", O_RDONLY);
+	int netfd = netopen("/home/anivesh/Desktop/OSD/4A/test.txt", O_RDWR);
 	if (netfd == -1)
 	{
-		perror("Error while opening file");
+		printf("Error while opening file: %s\n", strerror(errno));
 		exit(5);
 	}
 
 	char buf[MAXLEN];
-	int bytesread = netread(netfd, (char*)&buf, 100);
-	printf("number of bytes read from file: %d\n", bytesread);
-	printf("data read from file: %s\n", buf);
+	int bytesread;
 	
+	bytesread = netread(netfd, (char*)&buf, 100);
+	if (bytesread == -1)
+	{
+		printf("Error while opening file: %s\n", strerror(errno));
+		exit(5);
+	}
+	printf("number of bytes read from file: %d\n", bytesread);
+	printf("data read from file:\n%s", buf);
+	printf("\n");
+	
+	char str[] = "This is SPARTAAAAAAAAAA! All hail Leonidas";
+	int byteswrote = netwrite(netfd, str, strlen(str));
+	if (byteswrote == -1)
+	{
+		printf("Error while opening file: %s\n", strerror(errno));
+		exit(5);
+	}
+	printf("number of bytes wrote to file: %d\n", byteswrote);
+
+	bytesread = netread(netfd, (char*)&buf, 100);
+	printf("number of bytes read from file: %d\n", bytesread);
+	printf("data read from file:\n%s", buf);
+	printf("\n");
 	/*
     while ((n = read(sockfd, client_buffer, sizeof(client_buffer)-1)) > 0)
     {

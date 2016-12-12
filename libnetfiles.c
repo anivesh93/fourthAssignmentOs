@@ -23,6 +23,8 @@ char client_buffer_recv[MAXLEN], client_buffer_send[MAXLEN];
 
 extern int errno;
 
+char *ch;
+
 struct sockaddr_in serv_addr; //server address structure
 
 int make_socket()
@@ -111,8 +113,7 @@ int netopen(const char *pathname, int flags)
   	}
   	printf("Output received from the server: %s\n", client_buffer_recv);
   	//fputs(client_buffer_recv, stdout);
-
-  	char *ch;		
+	
   	ch = strtok(client_buffer_recv, ",");
   	int ctr = 0, num_bytes_netread;
   	while (ch != NULL) 
@@ -174,7 +175,6 @@ int netread(int netfd, char *buffer, int num_bytes)
    		exit(4);
   	}
 
-    char *ch;		
   	ch = strtok(client_buffer_recv, ",");
   	int ctr = 0, num_bytes_netread;
   	while (ch != NULL) 
@@ -229,8 +229,7 @@ int netwrite(int netfd, const void *buf, int nbyte)
    		perror("The server terminated prematurely");
    		exit(4);
   	}
-
-    char *ch;		
+	
   	ch = strtok(client_buffer_recv, ",");
   	int ctr = 0, num_bytes_netwrote;
   	while (ch != NULL) 
@@ -253,6 +252,54 @@ int netwrite(int netfd, const void *buf, int nbyte)
   	return num_bytes_netwrote;
 }
 
+int netclose(int netfd)
+{
+    int sockfd = make_socket();
+    if (sockfd == -1)
+        return -1;
+
+    if (connect_to_server(sockfd) == -1)
+        return -1;
+
+    memset(client_buffer_send, 0, sizeof(client_buffer_send));
+    char netfd_c[5]; 
+    sprintf(netfd_c, "%d", netfd);
+    strcat(client_buffer_send, netfd_c);
+    strcat(client_buffer_send, ",");
+    strcat(client_buffer_send, "close");
+
+    printf("\nsending to server for closing: %s\n", client_buffer_send);
+    send(sockfd, client_buffer_send, strlen(client_buffer_send), 0);
+
+    memset(client_buffer_recv, 0, sizeof(client_buffer_recv));
+    if (recv(sockfd, client_buffer_recv, MAXLEN, 0) == 0)
+    {
+        perror("The server terminated prematurely");
+        exit(4);
+    }
+       
+    ch = strtok(client_buffer_recv, ",");
+    int ctr = 0, retval;
+    while (ch != NULL) 
+    {
+        if (ctr == 0)
+        {
+            retval = atoi(ch);
+        }
+        if (ctr == 1)
+        {
+            if (retval == -1)
+                errno = atoi(ch);
+        }
+        ch = strtok(NULL, ",");
+        ctr++;
+    }
+    if (ch == NULL)
+        return 0;
+
+    return retval;
+}
+
 int main()
 {
 	
@@ -270,32 +317,74 @@ int main()
 		exit(5);
 	}
 
-	char buf[MAXLEN];
-	int bytesread;
+	char buf[MAXLEN], buf1[MAXLEN];
+	int bytesread, bytesread1;
 	
 	bytesread = netread(netfd, (char*)&buf, 100);
 	if (bytesread == -1)
 	{
-		printf("Error while opening file: %s\n", strerror(errno));
+		printf("Error while reading from file: %s\n", strerror(errno));
 		exit(5);
 	}
 	printf("number of bytes read from file: %d\n", bytesread);
 	printf("data read from file:\n%s", buf);
 	printf("\n");
 	
-	char str[] = "This is SPARTAAAAAAAAAA! All hail Leonidas";
+	char str[] = "This is SPARTAAAAAAAAAA!\n";
 	int byteswrote = netwrite(netfd, str, strlen(str));
 	if (byteswrote == -1)
 	{
-		printf("Error while opening file: %s\n", strerror(errno));
+		printf("Error while writing to file: %s\n", strerror(errno));
 		exit(5);
 	}
 	printf("number of bytes wrote to file: %d\n", byteswrote);
 
-	bytesread = netread(netfd, (char*)&buf, 100);
-	printf("number of bytes read from file: %d\n", bytesread);
+    char str1[] = "Jackie Chan!\n";
+    byteswrote = netwrite(netfd, str1, strlen(str1));
+    if (byteswrote == -1)
+    {
+        printf("Error while writing to file: %s\n", strerror(errno));
+        exit(5);
+    }
+    printf("number of bytes wrote to file: %d\n", byteswrote);
+
+    
+    int retval = netclose(netfd);
+    if (retval == -1)
+    {
+        printf("Error while closing file: %s\n", strerror(errno));
+        exit(6);
+    }
+    
+    
+    /*
+    char str2[] = "Odesza - If There's Time!\n";
+    byteswrote = netwrite(netfd, str2, strlen(str2));
+    if (byteswrote == -1)
+    {
+        printf("Error while writing to file: %s\n", strerror(errno));
+        exit(5);
+    }
+    printf("number of bytes wrote to file: %d\n", byteswrote);
+    */
+
+    int netfd1 = netopen("/home/anivesh/Desktop/OSD/4A/test.txt", O_RDWR);
+    if (netfd1 == -1)
+    {
+        printf("Error while opening file: %s\n", strerror(errno));
+        exit(5);
+    }
+
+    bytesread1 = netread(netfd1, (char*)&buf1, 100);
+    if (bytesread1 == -1)
+    {
+        printf("Error while reading from file: %s\n", strerror(errno));
+        exit(5);
+    }
+	printf("number of bytes read from file: %d\n", bytesread1);
 	printf("data read from file:\n%s", buf);
 	printf("\n");
+    
 	/*
     while ((n = read(sockfd, client_buffer, sizeof(client_buffer)-1)) > 0)
     {

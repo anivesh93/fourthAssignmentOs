@@ -21,6 +21,8 @@ char ip[100];
 
 char client_buffer_recv[MAXLEN], client_buffer_send[MAXLEN];
 
+char mode[200];
+
 extern int errno;
 
 char *ch;
@@ -29,14 +31,14 @@ struct sockaddr_in serv_addr; //server address structure
 
 int make_socket()
 {
-	int sockfd;
+  int sockfd;
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
-	if (sockfd < 0)
-	{
-		perror("Problem in creating socket");
-		exit(1);
-	}
-	return sockfd;
+  if (sockfd < 0)
+  {
+    perror("Problem in creating socket");
+    exit(1);
+  }
+  return sockfd;
 }
 
 int connect_to_server(int sockfd)
@@ -50,24 +52,25 @@ int connect_to_server(int sockfd)
         exit(2);
     } 
 
-	//connect to server
+  //connect to server
     if (connect(sockfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0)
     {
-    	perror("Problem in connecting to server");
-    	return -1;
-		//exit(3);
+      perror("Problem in connecting to server");
+      return -1;
+    //exit(3);
     }
 }
 
-int netserverinit(char *hostname)
+int netserverinit(char *hostname, char *modee)
 {
-	he = gethostbyname(hostname);
-	if (he == NULL)
-	{
-		herror("gethostbyname");
-		return -1;
-	}
-	printf("Hostname: %s\n", he->h_name);
+  strcpy(mode, modee);
+  he = gethostbyname(hostname);
+  if (he == NULL)
+  {
+    herror("gethostbyname");
+    return -1;
+  }
+  printf("Hostname: %s\n", he->h_name);
     printf("IP addresses: ");
     addr_list = (struct in_addr **)he->h_addr_list;
     int i;
@@ -76,31 +79,34 @@ int netserverinit(char *hostname)
         //printf("%s", inet_ntoa(*addr_list[i]));
         strcpy(ip , inet_ntoa(*addr_list[i]) );
     }
-	printf("%s\n", ip);
-	return 0;
+  printf("%s\n", ip);
+  return 0;
 }
 
 
 int netopen(const char *pathname, int flags)
 {
-	//create socket
-	int sockfd = make_socket();
-	if (sockfd == -1)
-		return -1;
+  //create socket
+  int sockfd = make_socket();
+  if (sockfd == -1)
+    return -1;
 
-	//initialize server port and address
+  //initialize server port and address
     if (connect_to_server(sockfd) == -1)
-    	return -1;
+      return -1;
     
     memset(client_buffer_send, 0, sizeof(client_buffer_send)); 
     strcat(client_buffer_send, pathname);
     strcat(client_buffer_send, ",");
     if (flags == 0)
-    	strcat(client_buffer_send, "O_RDONLY");
+      strcat(client_buffer_send, "O_RDONLY");
     if (flags == 1)
-    	strcat(client_buffer_send, "O_WRONLY");
+      strcat(client_buffer_send, "O_WRONLY");
     if (flags == 2)
-    	strcat(client_buffer_send, "O_RDWR");
+      strcat(client_buffer_send, "O_RDWR");
+
+    strcat(client_buffer_send, ",");
+    strcat(client_buffer_send, mode);
 
     printf("\nsending to server for opening: %s\n", client_buffer_send);
     send(sockfd, client_buffer_send, strlen(client_buffer_send), 0);
@@ -108,36 +114,36 @@ int netopen(const char *pathname, int flags)
     memset(client_buffer_recv, 0, sizeof(client_buffer_recv));
     if (recv(sockfd, client_buffer_recv, MAXLEN, 0) == 0)
     {
-   		perror("The server terminated prematurely");
-   		exit(4);
-  	}
-  	printf("Output received from the server: %s\n", client_buffer_recv);
-  	//fputs(client_buffer_recv, stdout);
-	
-  	ch = strtok(client_buffer_recv, ",");
-  	int ctr = 0, num_bytes_netread;
-  	while (ch != NULL) 
-  	{
-  		if (ctr == 0)
-  			num_bytes_netread = atoi(ch);
-  		if (ctr == 1)
-  			errno = atoi(ch); //error code will be second token in data received from server
-    	ch = strtok(NULL, ",");
-    	ctr++;
-  	}
-  	if (ctr > 1)
-  		return -1;
-  	
-  	return atoi(client_buffer_recv);
+      perror("The server terminated prematurely");
+      exit(4);
+    }
+    printf("Output received from the server: %s\n", client_buffer_recv);
+    //fputs(client_buffer_recv, stdout);
+  
+    ch = strtok(client_buffer_recv, ",");
+    int ctr = 0, num_bytes_netread;
+    while (ch != NULL) 
+    {
+      if (ctr == 0)
+        num_bytes_netread = atoi(ch);
+      if (ctr == 1)
+        errno = atoi(ch); //error code will be second token in data received from server
+      ch = strtok(NULL, ",");
+      ctr++;
+    }
+    if (ctr > 1)
+      return -1;
+    
+    return atoi(client_buffer_recv);
 }
 
 int netread(int netfd, char *buffer, int num_bytes)
 {
-	int sockfd = make_socket();
-	if (sockfd == -1)
-		return -1;
+  int sockfd = make_socket();
+  if (sockfd == -1)
+    return -1;
 
-	struct sockaddr_in serv_addr; 
+  struct sockaddr_in serv_addr; 
     memset(&serv_addr, '0', sizeof(serv_addr)); 
     serv_addr.sin_family = AF_INET;
     serv_addr.sin_port = htons(SERV_PORT); 
@@ -147,11 +153,11 @@ int netread(int netfd, char *buffer, int num_bytes)
         exit(2);
     } 
 
-	//connect to server
+  //connect to server
     if (connect(sockfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0)
     {
-    	perror("Problem in connecting to server");
-		exit(3);
+      perror("Problem in connecting to server");
+    exit(3);
     }
 
     memset(client_buffer_send, 0, sizeof(client_buffer_send));
@@ -171,43 +177,43 @@ int netread(int netfd, char *buffer, int num_bytes)
     memset(client_buffer_recv, 0, sizeof(client_buffer_recv));
     if (recv(sockfd, client_buffer_recv, MAXLEN, 0) == 0)
     {
-   		perror("The server terminated prematurely");
-   		exit(4);
-  	}
+      perror("The server terminated prematurely");
+      exit(4);
+    }
 
-  	ch = strtok(client_buffer_recv, ",");
-  	int ctr = 0, num_bytes_netread;
-  	while (ch != NULL) 
-  	{
-  		if (ctr == 0)
-  		{
-  			num_bytes_netread = atoi(ch);
-  		}
-  		if (ctr == 1)
-  		{
-  			if (num_bytes_netread == -1)
-  				errno = atoi(ch);
-  			else
-  				strcpy(buffer, ch);
-  		}
-    		//printf("%s\n", ch);
-    	ch = strtok(NULL, ",");
-    	ctr++;
-  	}
-  	
-  	return num_bytes_netread;
+    ch = strtok(client_buffer_recv, ",");
+    int ctr = 0, num_bytes_netread;
+    while (ch != NULL) 
+    {
+      if (ctr == 0)
+      {
+        num_bytes_netread = atoi(ch);
+      }
+      if (ctr == 1)
+      {
+        if (num_bytes_netread == -1)
+          errno = atoi(ch);
+        else
+          strcpy(buffer, ch);
+      }
+        //printf("%s\n", ch);
+      ch = strtok(NULL, ",");
+      ctr++;
+    }
+    
+    return num_bytes_netread;
 }
 
 int netwrite(int netfd, const void *buf, int nbyte)
 {
-	int sockfd = make_socket();
-	if (sockfd == -1)
-		return -1;
+  int sockfd = make_socket();
+  if (sockfd == -1)
+    return -1;
 
-	if (connect_to_server(sockfd) == -1)
-		return -1;
+  if (connect_to_server(sockfd) == -1)
+    return -1;
 
-	memset(client_buffer_send, 0, sizeof(client_buffer_send));
+  memset(client_buffer_send, 0, sizeof(client_buffer_send));
     char netfd_c[5]; 
     sprintf(netfd_c, "%d", netfd);
     strcat(client_buffer_send, netfd_c);
@@ -226,30 +232,30 @@ int netwrite(int netfd, const void *buf, int nbyte)
     memset(client_buffer_recv, 0, sizeof(client_buffer_recv));
     if (recv(sockfd, client_buffer_recv, MAXLEN, 0) == 0)
     {
-   		perror("The server terminated prematurely");
-   		exit(4);
-  	}
-	
-  	ch = strtok(client_buffer_recv, ",");
-  	int ctr = 0, num_bytes_netwrote;
-  	while (ch != NULL) 
-  	{
-  		if (ctr == 0)
-  		{
-  			num_bytes_netwrote = atoi(ch);
-  		}
-  		if (ctr == 1)
-  		{
-  			if (num_bytes_netwrote == -1)
-  				errno = atoi(ch);
-  		}
-    	ch = strtok(NULL, ",");
-    	ctr++;
-  	}
-  	if (ch == NULL)
-  		return atoi(client_buffer_recv);
+      perror("The server terminated prematurely");
+      exit(4);
+    }
+  
+    ch = strtok(client_buffer_recv, ",");
+    int ctr = 0, num_bytes_netwrote;
+    while (ch != NULL) 
+    {
+      if (ctr == 0)
+      {
+        num_bytes_netwrote = atoi(ch);
+      }
+      if (ctr == 1)
+      {
+        if (num_bytes_netwrote == -1)
+          errno = atoi(ch);
+      }
+      ch = strtok(NULL, ",");
+      ctr++;
+    }
+    if (ch == NULL)
+      return atoi(client_buffer_recv);
 
-  	return num_bytes_netwrote;
+    return num_bytes_netwrote;
 }
 
 int netclose(int netfd)
@@ -267,6 +273,8 @@ int netclose(int netfd)
     strcat(client_buffer_send, netfd_c);
     strcat(client_buffer_send, ",");
     strcat(client_buffer_send, "close");
+    strcat(client_buffer_send, ",");
+    strcat(client_buffer_send, mode);
 
     printf("\nsending to server for closing: %s\n", client_buffer_send);
     send(sockfd, client_buffer_send, strlen(client_buffer_send), 0);
@@ -302,42 +310,42 @@ int netclose(int netfd)
 
 int main()
 {
-	
-	if (netserverinit("java.cs.rutgers.edu") == -1)
-	{
-		printf("%s\n", "Hostname doesn't exist");
-		exit(0);
-	}
-	
-	
-	int netfd = netopen("/ilab/users/vsa17/fourthAssignmentOs/ab.txt", O_RDWR);
-	if (netfd == -1)
-	{
-		printf("Error while opening file: %s\n", strerror(errno));
-		exit(5);
-	}
+  
+  if (netserverinit("java.cs.rutgers.edu") == -1)
+  {
+    printf("%s\n", "Hostname doesn't exist");
+    exit(0);
+  }
+  
+  
+  int netfd = netopen("/ilab/users/vsa17/fourthAssignmentOs/ab.txt", O_RDWR);
+  if (netfd == -1)
+  {
+    printf("Error while opening file: %s\n", strerror(errno));
+    exit(5);
+  }
 
-	char buf[MAXLEN], buf1[MAXLEN];
-	int bytesread, bytesread1;
-	
-	bytesread = netread(netfd, (char*)&buf, 100);
-	if (bytesread == -1)
-	{
-		printf("Error while reading from file: %s\n", strerror(errno));
-		exit(5);
-	}
-	printf("number of bytes read from file: %d\n", bytesread);
-	printf("data read from file:\n%s", buf);
-	printf("\n");
-	
-	char str[] = "This is SPARTAAAAAAAAAA!\n";
-	int byteswrote = netwrite(netfd, str, strlen(str));
-	if (byteswrote == -1)
-	{
-		printf("Error while writing to file: %s\n", strerror(errno));
-		exit(5);
-	}
-	printf("number of bytes wrote to file: %d\n", byteswrote);
+  char buf[MAXLEN], buf1[MAXLEN];
+  int bytesread, bytesread1;
+  
+  bytesread = netread(netfd, (char*)&buf, 100);
+  if (bytesread == -1)
+  {
+    printf("Error while reading from file: %s\n", strerror(errno));
+    exit(5);
+  }
+  printf("number of bytes read from file: %d\n", bytesread);
+  printf("data read from file:\n%s", buf);
+  printf("\n");
+  
+  char str[] = "This is SPARTAAAAAAAAAA!\n";
+  int byteswrote = netwrite(netfd, str, strlen(str));
+  if (byteswrote == -1)
+  {
+    printf("Error while writing to file: %s\n", strerror(errno));
+    exit(5);
+  }
+  printf("number of bytes wrote to file: %d\n", byteswrote);
 
     char str1[] = "Jackie Chan!\n";
     byteswrote = netwrite(netfd, str1, strlen(str1));
@@ -381,11 +389,11 @@ int main()
         printf("Error while reading from file: %s\n", strerror(errno));
         exit(5);
     }
-	printf("number of bytes read from file: %d\n", bytesread1);
-	printf("data read from file:\n%s", buf);
-	printf("\n");
+  printf("number of bytes read from file: %d\n", bytesread1);
+  printf("data read from file:\n%s", buf);
+  printf("\n");
     
-	/*
+  /*
     while ((n = read(sockfd, client_buffer, sizeof(client_buffer)-1)) > 0)
     {
         client_buffer[n] = 0;
@@ -394,7 +402,6 @@ int main()
             printf("\n Error : Fputs error\n");
         }
     } 
-
     if (n < 0)
     {
         printf("\n Read error \n");

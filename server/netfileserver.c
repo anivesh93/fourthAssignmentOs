@@ -36,6 +36,7 @@ typedef struct
 	char pathname[MAXLEN];
 	char mode[MAXLEN];
 	FILE *fp;
+  char accessMode[100];
 }file_details;
 
 file_details client_file_list[100]; //an array of client-file mappings
@@ -172,19 +173,77 @@ void client_handler()
 		{
             memset(serv_buffer_send, 0, sizeof(serv_buffer_send));
     		char *ch;
+        char accessMode_c[100];
   			ch = strtok(serv_buffer_recv, ",");
   			ctr = 0;
   			while (ch != NULL) 
   			{
   				if (ctr == 0)
   					strcpy(pathname, ch);
-  				if (ctr == 1)
+  				else if (ctr == 1)
   					strcpy(mode_c, ch);
+          else if(ctr == 2)
+            strcpy(accessMode_c, ch);
     			//printf("%s\n", ch);
     			ch = strtok(NULL, ",");
     			ctr++;
   			}
-
+        int flag = 0;
+        if(!strcmp(accessMode_c, "exclusive"))
+        {
+          for(int i = 0; i < 100; i++)
+          {
+            if(strlen(client_file_list[i].pathname) == 0)
+            {
+              break;
+            }
+            if(!strcmp(pathname, client_file_list[i].pathname))
+            {
+              if(!strcmp(client_file_list[i].accessMode, "transaction"))
+                flag = 1;
+            }
+          }
+        }
+        else if(!strcmp(accessMode_c, "unrestricted"))
+        {
+          for(int i = 0; i < 100; i++)
+          {
+            if(strlen(client_file_list[i].pathname) == 0)
+            {
+              break;
+            }
+            if(!strcmp(pathname, client_file_list[i].pathname))
+            {
+              if(!strcmp(client_file_list[i].accessMode, "exclusive") || !strcmp(client_file_list[i].accessMode, "transaction"))
+                flag = 1;
+            }
+          }
+        }
+        else
+        {
+          //transaction mode
+          
+          for(int i = 0; i < 100; i++)
+          {
+            if(strlen(client_file_list[i].pathname) == 0)
+            {
+              break;
+            }
+            if(!strcmp(pathname, client_file_list[i].pathname))
+            {
+              flag = 1;
+            }
+          }
+        }
+        if(flag)
+        {
+                errno = EPERM;
+                strcat(serv_buffer_send, "-1");
+                strcat(serv_buffer_send, ",");
+                char errno_c[2];
+                sprintf(errno_c, "%d", errno);
+                strcat(serv_buffer_send, errno_c);
+        }
   			if (!strcmp(mode_c, "O_RDONLY") || !strcmp(mode_c, "O_WRONLY") || !strcmp(mode_c, "O_RDWR"))
    			{
    				FILE *fp;
@@ -206,6 +265,7 @@ void client_handler()
 					//f.pathname = pathname;
 					strcpy(f.pathname, pathname);	
 					strcpy(f.mode, mode_c);
+          strcpy(f.accessMode, accessMode_c);
 					f.fp = fp;
 					client_file_list[-(90 + netfd)] = f;
    					//send(connfd, serv_buffer_send, strlen(serv_buffer_send), 0);

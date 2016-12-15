@@ -450,7 +450,7 @@ void client_handler()
                     //memset(client_file_list[-(90 + netfd_close)].mode, 0, sizeof(client_file_list[-(90 + netfd_close)].mode));
                     client_file_list[-(90 + netfd_close)].mode[0] = '\0';
                     client_file_list[-(90 + netfd_close)].fp = NULL; 
-                    client_file_list[-(90 + netfd_close)].accessMode = '\0'; 
+                    client_file_list[-(90 + netfd_close)].accessMode[0] = '\0'; 
                     strcat(serv_buffer_send, "0");  
                 }
             }

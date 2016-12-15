@@ -200,12 +200,25 @@ void client_handler()
             if(!strcmp(pathname, client_file_list[i].pathname))
             {
               if(!strcmp(client_file_list[i].accessMode, "transaction"))
+              {
                 flag = 1;
+                break;
+              }
+
+              if(!strcmp(client_file_list[i].mode, "O_WRONLY") || !strcmp(client_file_list[i].mode, "O_RDWR"))
+              {
+                flag = 1;
+                break;
+              }
             }
           }
         }
         else if(!strcmp(accessMode_c, "unrestricted"))
         {
+          if((!strcmp(mode_c, "O_WRONLY") || !strcmp(mode_c, "O_RDWR")))
+          {
+            flag = 1;
+          }
           for(int i = 0; i < 100; i++)
           {
             if(strlen(client_file_list[i].pathname) == 0)
@@ -214,7 +227,7 @@ void client_handler()
             }
             if(!strcmp(pathname, client_file_list[i].pathname))
             {
-              if(!strcmp(client_file_list[i].accessMode, "exclusive") || !strcmp(client_file_list[i].accessMode, "transaction"))
+              if(!strcmp(client_file_list[i].accessMode, "transaction"))
                 flag = 1;
             }
           }
@@ -437,6 +450,7 @@ void client_handler()
                     //memset(client_file_list[-(90 + netfd_close)].mode, 0, sizeof(client_file_list[-(90 + netfd_close)].mode));
                     client_file_list[-(90 + netfd_close)].mode[0] = '\0';
                     client_file_list[-(90 + netfd_close)].fp = NULL; 
+                    client_file_list[-(90 + netfd_close)].accessMode = '\0'; 
                     strcat(serv_buffer_send, "0");  
                 }
             }

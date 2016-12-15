@@ -201,13 +201,13 @@ void client_handler()
             {
               if(!strcmp(client_file_list[i].accessMode, "transaction"))
               {
-                flag = 1;
+                flage = 1;
                 break;
               }
 
               if(!strcmp(client_file_list[i].mode, "O_WRONLY") || !strcmp(client_file_list[i].mode, "O_RDWR"))
               {
-                flag = 1;
+                flage = 1;
                 break;
               }
             }
@@ -217,7 +217,18 @@ void client_handler()
         {
           if((!strcmp(mode_c, "O_WRONLY") || !strcmp(mode_c, "O_RDWR")))
           {
-            flag = 1;
+            for(int i = 0; i < 100; i++)
+            {
+              if(strlen(client_file_list[i].pathname) == 0)
+              {
+                break;
+              }
+              if(!strcmp(pathname, client_file_list[i].pathname))
+              {
+                if(!strcmp(client_file_list[i].accessMode, "exclusive"))
+                  flage = 1;
+              }
+            }
           }
           for(int i = 0; i < 100; i++)
           {
@@ -228,7 +239,7 @@ void client_handler()
             if(!strcmp(pathname, client_file_list[i].pathname))
             {
               if(!strcmp(client_file_list[i].accessMode, "transaction"))
-                flag = 1;
+                flage = 1;
             }
           }
         }
@@ -244,11 +255,11 @@ void client_handler()
             }
             if(!strcmp(pathname, client_file_list[i].pathname))
             {
-              flag = 1;
+              flage = 1;
             }
           }
         }
-        if(flag)
+        if(flage)
         {
                 errno = EPERM;
                 strcat(serv_buffer_send, "-1");

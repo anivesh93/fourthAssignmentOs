@@ -303,7 +303,7 @@ int netclose(int netfd)
 int main()
 {
 	
-	if (netserverinit("localhost") == -1)
+	if (netserverinit("java.cs.rutgers.edu") == -1)
 	{
 		printf("%s\n", "Hostname doesn't exist");
 		exit(0);

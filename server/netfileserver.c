@@ -244,7 +244,7 @@ void client_handler()
                 sprintf(errno_c, "%d", errno);
                 strcat(serv_buffer_send, errno_c);
         }
-  			if (!strcmp(mode_c, "O_RDONLY") || !strcmp(mode_c, "O_WRONLY") || !strcmp(mode_c, "O_RDWR"))
+  			else if (!strcmp(mode_c, "O_RDONLY") || !strcmp(mode_c, "O_WRONLY") || !strcmp(mode_c, "O_RDWR"))
    			{
    				FILE *fp;
   				if (!strcmp(mode_c, "O_RDONLY"))

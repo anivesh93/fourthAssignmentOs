@@ -311,7 +311,7 @@ int netclose(int netfd)
 int main()
 {
   
-  if (netserverinit("java.cs.rutgers.edu", "trans") == -1)
+  if (netserverinit("java.cs.rutgers.edu", "exclusive") == -1)
   {
     printf("%s\n", "Hostname doesn't exist");
     exit(0);
@@ -357,12 +357,12 @@ int main()
     printf("number of bytes wrote to file: %d\n", byteswrote);
 
     
-    /*int retval = netclose(netfd);
+    int retval = netclose(netfd);
     if (retval == -1)
     {
         printf("Error while closing file: %s\n", strerror(errno));
         exit(6);
-    }*/
+    }
     
     
     /*

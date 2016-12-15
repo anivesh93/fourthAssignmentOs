@@ -311,7 +311,7 @@ int netclose(int netfd)
 int main()
 {
   
-  if (netserverinit("java.cs.rutgers.edu", "trans") == -1)
+  if (netserverinit("java.cs.rutgers.edu", "exclusive") == -1)
   {
     printf("%s\n", "Hostname doesn't exist");
     exit(0);

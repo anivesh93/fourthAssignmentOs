@@ -311,7 +311,7 @@ int netclose(int netfd)
 int main()
 {
   
-  if (netserverinit("java.cs.rutgers.edu", "exclusive") == -1)
+  if (netserverinit("java.cs.rutgers.edu", "unrestricted") == -1)
   {
     printf("%s\n", "Hostname doesn't exist");
     exit(0);
@@ -357,7 +357,7 @@ int main()
     printf("number of bytes wrote to file: %d\n", byteswrote);
 
     
-    int retval = netclose(netfd);
+    /*int retval = netclose(netfd);
     if (retval == -1)
     {
         printf("Error while closing file: %s\n", strerror(errno));
@@ -374,7 +374,7 @@ int main()
         exit(5);
     }
     printf("number of bytes wrote to file: %d\n", byteswrote);
-    */
+    
 
     int netfd1 = netopen("/ilab/users/vsa17/fourthAssignmentOs/ab.txt", O_RDWR);
     if (netfd1 == -1)
@@ -391,7 +391,7 @@ int main()
     }
   printf("number of bytes read from file: %d\n", bytesread1);
   printf("data read from file:\n%s", buf);
-  printf("\n");
+  printf("\n");*/
     
   /*
     while ((n = read(sockfd, client_buffer, sizeof(client_buffer)-1)) > 0)

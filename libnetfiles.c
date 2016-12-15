@@ -368,7 +368,7 @@ int main()
     printf("number of bytes wrote to file: %d\n", byteswrote);
     */
 
-    int netfd1 = netopen("/home/anivesh/Desktop/OSD/4A/test.txt", O_RDWR);
+    int netfd1 = netopen("/ilab/users/vsa17/fourthAssignmentOs/ab.txt", O_RDWR);
     if (netfd1 == -1)
     {
         printf("Error while opening file: %s\n", strerror(errno));

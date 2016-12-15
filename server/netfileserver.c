@@ -188,7 +188,7 @@ void client_handler()
     			ch = strtok(NULL, ",");
     			ctr++;
   			}
-        int flag = 0;
+        int flage = 0;
         if(!strcmp(accessMode_c, "exclusive"))
         {
           for(int i = 0; i < 100; i++)
